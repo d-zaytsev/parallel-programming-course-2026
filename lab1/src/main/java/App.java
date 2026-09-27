@@ -152,7 +152,7 @@ public class App {
         gen.generateLoad();
         long[] values = gen.getValues();
 
-        boolean doInconsistencyTest = false;
+        boolean doInconsistencyTest = true;
 
         App app = new App();
         for (int T : threadCounts) {

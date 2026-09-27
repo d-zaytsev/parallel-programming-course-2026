@@ -217,3 +217,40 @@ Result snapshot count: 453491197
 Thread operations count: 453491197
 Main thread incorrect snapshots (buckets less than count): 0
 Main thread incorrect snapshots (buckets more than count): 0
+## ========== Inconsistency Test (understanding experiment) ==========
+T = 1
+Inconsistency Test
+Result snapshot count: 28096942
+Thread operations count: 28096942
+Main thread incorrect snapshots (buckets less than count): 19407
+Main thread incorrect snapshots (buckets more than count): 0
+T = 2
+Inconsistency Test
+Result snapshot count: 48374735
+Thread operations count: 48374736
+Main thread incorrect snapshots (buckets less than count): 20000
+Main thread incorrect snapshots (buckets more than count): 0
+T = 4
+Inconsistency Test
+Result snapshot count: 85981793
+Thread operations count: 85981834
+Main thread incorrect snapshots (buckets less than count): 863
+Main thread incorrect snapshots (buckets more than count): 0
+T = 8
+Inconsistency Test
+Result snapshot count: 134286417
+Thread operations count: 134286286
+Main thread incorrect snapshots (buckets less than count): 19045
+Main thread incorrect snapshots (buckets more than count): 0
+T = 10
+Inconsistency Test
+Result snapshot count: 153987533
+Thread operations count: 153987549
+Main thread incorrect snapshots (buckets less than count): 19402
+Main thread incorrect snapshots (buckets more than count): 0
+T = 12
+Inconsistency Test
+Result snapshot count: 285115519
+Thread operations count: 285115521
+Main thread incorrect snapshots (buckets less than count): 17611
+Main thread incorrect snapshots (buckets more than count): 127
