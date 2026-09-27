@@ -152,13 +152,13 @@ public class App {
         gen.generateLoad();
         long[] values = gen.getValues();
 
-        boolean doInconsistencyTest = true;
+        boolean doInconsistencyTest = false;
 
         App app = new App();
         for (int T : threadCounts) {
             // Prepare collector
-            IMetricsCollector collector = new StripingMetricsCollector();
-            System.out.println("synchronized collector, T = " + T);
+            IMetricsCollector collector = new DoubleBufferingMetricsCollector();
+            System.out.println("T = " + T);
 
             if (doInconsistencyTest)
                 // Inconsistency Test (optional)
