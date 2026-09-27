@@ -1,0 +1,107 @@
+# ---- Stage 0 ----
+
+single collector, T = 1
+records count: 12291694358
+median: 412852000.00 ops/sec
+
+# ---- Stage 1 ----
+
+synchronized collector, T = 1
+records count: 1838457160
+median: 61359000.00 ops/sec
+synchronized collector, T = 2
+records count: 448752975
+median: 13571000.00 ops/sec
+synchronized collector, T = 4
+records count: 147137968
+median: 4859000.00 ops/sec
+synchronized collector, T = 8
+records count: 141086732
+median: 4707000.00 ops/sec
+synchronized collector, T = 10
+records count: 132280491
+median: 4400000.00 ops/sec
+synchronized collector, T = 12
+records count: 135626210
+median: 4493000.00 ops/sec
+
+## ========== Empty collector ==========
+
+synchronized collector, T = 1
+records count: 0
+median: 60301000.00 ops/sec
+synchronized collector, T = 2
+records count: 0
+median: 26367000.00 ops/sec
+synchronized collector, T = 4
+records count: 0
+median: 7828000.00 ops/sec
+synchronized collector, T = 8
+records count: 0
+median: 6418000.00 ops/sec
+synchronized collector, T = 10
+records count: 0
+median: 5137000.00 ops/sec
+synchronized collector, T = 12
+records count: 0
+median: 6274000.00 ops/sec
+
+# ---- Stage 2 ----
+striping collector, T = 1
+records count: 937481754
+median: 31285000.00 ops/sec
+striping collector, T = 2
+records count: 220376599
+median: 6584000.00 ops/sec
+striping collector, T = 4
+records count: 198200968
+median: 6816000.00 ops/sec
+striping collector, T = 8
+records count: 190913593
+median: 6105000.00 ops/sec
+striping collector, T = 10
+records count: 188787222
+median: 5880000.00 ops/sec
+striping collector, T = 12
+records count: 220571888
+median: 7678000.00 ops/sec
+
+## ========== Inconsistency Test ==========
+synchronized collector, T = 1
+Inconsistency Test
+Result snapshot count: 6712159
+Thread operations count: 6712159
+Main thread incorrect snapshots (buckets less than count): 18603
+Main thread incorrect snapshots (buckets more than count): 91
+synchronized collector, T = 2
+Inconsistency Test
+Result snapshot count: 1966224
+Thread operations count: 1966224
+Main thread incorrect snapshots (buckets less than count): 18847
+Main thread incorrect snapshots (buckets more than count): 366
+synchronized collector, T = 4
+Inconsistency Test
+Result snapshot count: 1797079
+Thread operations count: 1797079
+Main thread incorrect snapshots (buckets less than count): 18779
+Main thread incorrect snapshots (buckets more than count): 398
+synchronized collector, T = 8
+Inconsistency Test
+Result snapshot count: 2208390
+Thread operations count: 2208390
+Main thread incorrect snapshots (buckets less than count): 17629
+Main thread incorrect snapshots (buckets more than count): 710
+synchronized collector, T = 10
+Inconsistency Test
+Result snapshot count: 1882490
+Thread operations count: 1882490
+Main thread incorrect snapshots (buckets less than count): 17180
+Main thread incorrect snapshots (buckets more than count): 783
+synchronized collector, T = 12
+Inconsistency Test
+Result snapshot count: 2239900
+Thread operations count: 2239900
+Main thread incorrect snapshots (buckets less than count): 18122
+Main thread incorrect snapshots (buckets more than count): 504
+
+# ---- Stage 3 ----
