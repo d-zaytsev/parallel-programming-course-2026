@@ -1,3 +1,7 @@
+.vscode
+.kilo
+.mypy*
+
 # JAVA
 
 # Compiled class file
