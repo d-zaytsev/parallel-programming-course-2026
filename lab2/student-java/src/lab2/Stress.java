@@ -31,7 +31,10 @@ public final class Stress {
         int runs = Integer.parseInt(a[0]);
         String window = a.length > 1 ? a[1] : "none";
         v2 = a.length > 2 && a[2].equals("v2");
+
+        // set of threads wait for each other to reach a common execution point
         CyclicBarrier start = new CyclicBarrier(3), end = new CyclicBarrier(3);
+        
         Runnable body = () -> {
             try { for (int i = 0; i < runs; i++) { start.await(); withdraw(100, window); end.await(); } }
             catch (Exception e) { throw new RuntimeException(e); }
