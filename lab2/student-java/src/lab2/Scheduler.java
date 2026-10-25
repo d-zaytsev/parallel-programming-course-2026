@@ -20,12 +20,16 @@ public final class Scheduler {
     private final class ScheduledTask {
         final Runnable body;
         final Semaphore sem;
+        final Scheduler mySched;
 
         Thread thread;
         ScheduledThreadState state;
         BooleanSupplier condition;
+        boolean touched;
 
-        ScheduledTask(Runnable body) {
+        ScheduledTask(Runnable body, Scheduler sched) {
+            this.mySched = sched;
+            this.touched = true;
             this.condition = () -> false;
             this.state = ScheduledThreadState.WAITING;
             this.body = body;
@@ -48,8 +52,8 @@ public final class Scheduler {
 
     final StringBuilder trace;
     final List<ScheduledTask> runnables = new ArrayList<>();
+    final Semaphore sem = new Semaphore(0);
 
-    static final Semaphore schedSem = new Semaphore(0);
     private static final ThreadLocal<ScheduledTask> CURRENT = new ThreadLocal<>();
 
     public Scheduler() {
@@ -57,7 +61,7 @@ public final class Scheduler {
     }
 
     public void spawn(Runnable body) {
-        runnables.add(new ScheduledTask(body));
+        runnables.add(new ScheduledTask(body, this));
     }
 
     /**
@@ -68,12 +72,16 @@ public final class Scheduler {
         for (ScheduledTask t : runnables) {
             t.thread = new Thread(() -> {
                 CURRENT.set(t);
-                t.sem.acquireUninterruptibly();
-                t.body.run();
-                t.state = ScheduledThreadState.FINISHED;
-                schedSem.release();
+                try {
+                    t.body.run();
+                } finally {
+                    t.state = ScheduledThreadState.FINISHED;
+                    sem.release();
+                }
             });
+            t.thread.setDaemon(true);
             t.thread.start();
+            sem.acquireUninterruptibly();
         }
 
         int last = -1;
@@ -105,7 +113,7 @@ public final class Scheduler {
             var task = this.runnables.get(last);
             task.state = ScheduledThreadState.WORKING;
             task.sem.release();
-            schedSem.acquireUninterruptibly();
+            sem.acquireUninterruptibly();
         } while (true);
 
         for (ScheduledTask t : runnables) {
@@ -131,19 +139,38 @@ public final class Scheduler {
      */
     public static void point() {
         var current = CURRENT.get();
+        log("window");
+        current.touched = true;
+    }
 
-        current.state = ScheduledThreadState.WAITING;
-        schedSem.release();
-        current.sem.acquireUninterruptibly();
+    static void yield(ScheduledThreadState newState) {
+        var cur = CURRENT.get();
+        if (cur.touched) {
+            cur.state = newState != null ? newState : ScheduledThreadState.WAITING;
+            cur.touched = false;
+            cur.mySched.sem.release();
+            cur.sem.acquireUninterruptibly();
+        }
+        cur.touched = true;
     }
 
     /** Ждать, пока cond не станет true. До этого поток не попадает в enabled. */
     public static void await(BooleanSupplier cond) {
-        var current = CURRENT.get();
+        var cur = CURRENT.get();
+        cur.condition = cond;
+        if (!cond.getAsBoolean())
+        {
+            cur.touched = true; // засыпает пока условие не выполнится
+            Scheduler.yield(ScheduledThreadState.WAITING_CONDITION);
+        }
+        log("await done");
+    }
 
-        current.state = ScheduledThreadState.WAITING_CONDITION;
-        current.condition = cond;
-        schedSem.release();
-        current.sem.acquireUninterruptibly();
+    public static void log(String msg) {
+        var current = CURRENT.get();
+        if (current.mySched.logging) {
+            var letter = (char) ('A' + current.mySched.runnables.indexOf(current));
+            current.mySched.log.add(letter + "  " + msg);
+        }
     }
 }

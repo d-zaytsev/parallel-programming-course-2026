@@ -7,28 +7,35 @@ public final class Shared<T> {
     private final String name;
     private T value;
 
-    public Shared(String name, T value) { this.name = name; this.value = value; }
-
-    /** Чтение с паузой перед ним. */
-    public T get() {
-        throw new UnsupportedOperationException("TODO этап 1: Shared.get");
+    public Shared(String name, T value) {
+        this.name = name;
+        this.value = value;
     }
 
-    /** Запись с паузой перед ней. */
+    public T get() {
+        Scheduler.yield(null);
+        Scheduler.log(String.format("%s -> %s", this.name, this.value.toString()));
+        return this.value;
+    }
+
     public void set(T v) {
-        throw new UnsupportedOperationException("TODO этап 1: Shared.set");
+        Scheduler.yield(null);
+        Scheduler.log(String.format("%s = %s", this.name, v.toString()));
+        this.value = v;
     }
 
     /** То же, что get(): планировщик не моделирует порядки памяти. */
     public T getAcquire() {
-        throw new UnsupportedOperationException("TODO этап 1: Shared.getAcquire");
+        return this.get();
     }
 
     /** То же, что set(v). */
     public void setRelease(T v) {
-        throw new UnsupportedOperationException("TODO этап 1: Shared.setRelease");
+        this.set(v);
     }
 
     /** Чтение без паузы и без лога: для проверок после прогона и условий await. */
-    public T peek() { return value; }
+    public T peek() {
+        return value;
+    }
 }
