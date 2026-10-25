@@ -13,13 +13,13 @@ public final class Shared<T> {
     }
 
     public T get() {
-        Scheduler.yield(null);
+        Scheduler.yield(null, false);
         Scheduler.log(String.format("%s -> %s", this.name, this.value.toString()));
         return this.value;
     }
 
     public void set(T v) {
-        Scheduler.yield(null);
+        Scheduler.yield(null, false);
         Scheduler.log(String.format("%s = %s", this.name, v.toString()));
         this.value = v;
     }

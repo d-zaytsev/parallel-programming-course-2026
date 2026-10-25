@@ -9,7 +9,7 @@ import java.util.function.BooleanSupplier;
  * Этап 2: обнаружение deadlock в главном цикле и корректное завершение застрявших потоков.
  * Внутреннее устройство (свои классы, семафоры, вспомогательные методы для Shared и SchedLock) придумываете сами. */
 public final class Scheduler {
-    private enum ScheduledThreadState {
+    enum ScheduledThreadState {
         WORKING,
         WAITING,
         WAITING_LOCK,
@@ -17,7 +17,9 @@ public final class Scheduler {
         FINISHED
     }
 
-    private final class ScheduledTask {
+    final class ScheduledTask {
+        /** Буква потока: A, B, … в порядке spawn. */
+        final char id;
         final Runnable body;
         final Semaphore sem;
         final Scheduler mySched;
@@ -27,7 +29,8 @@ public final class Scheduler {
         BooleanSupplier condition;
         boolean touched;
 
-        ScheduledTask(Runnable body, Scheduler sched) {
+        ScheduledTask(char id, Runnable body, Scheduler sched) {
+            this.id = id;
             this.mySched = sched;
             this.touched = true;
             this.condition = () -> false;
@@ -37,21 +40,14 @@ public final class Scheduler {
         }
     }
 
-    /**
-     * Если true, каждая операция с общими данными добавляет строку в log.
-     * Выставляет runner.
-     */
     boolean logging;
-    /**
-     * Лог прогона: строки "<поток> <операция>", например "A lock mu", "A balance ->
-     * 100".
-     */
     final List<String> log = new ArrayList<>();
-    /** null, если deadlock не было; иначе "held={a:A, b:B}" (этап 2). */
+
     String deadlock;
 
     final StringBuilder trace;
     final List<ScheduledTask> runnables = new ArrayList<>();
+    final List<SchedLock> locks = new ArrayList<>();
     final Semaphore sem = new Semaphore(0);
 
     private static final ThreadLocal<ScheduledTask> CURRENT = new ThreadLocal<>();
@@ -61,7 +57,7 @@ public final class Scheduler {
     }
 
     public void spawn(Runnable body) {
-        runnables.add(new ScheduledTask(body, this));
+        runnables.add(new ScheduledTask((char) ('A' + runnables.size()), body, this));
     }
 
     /**
@@ -88,29 +84,44 @@ public final class Scheduler {
 
         do {
             List<Integer> enabled = new ArrayList<>();
+            List<Integer> liveThreads = new ArrayList<>();
+
             for (int i = 0; i < runnables.size(); i++) {
                 var t = this.runnables.get(i);
 
+                if (t.state == ScheduledThreadState.FINISHED)
+                    continue;
+                liveThreads.add(i);
+
                 switch (t.state) {
-                    case FINISHED -> {
-                    }
-                    case WAITING_CONDITION -> {
+                    case WAITING_LOCK:
+                    case WAITING_CONDITION:
                         if (t.condition.getAsBoolean())
                             enabled.add(i);
-                    }
-                    case WAITING_LOCK -> {
-                    }
-                    default -> enabled.add(i);
+                        break;
+                    case FINISHED:
+                        break;
+                    default:
+                        enabled.add(i);
+                        break;
                 }
             }
 
-            if (enabled.size() == 0)
+            if (liveThreads.isEmpty())
                 break;
 
-            last = strategy.pick(enabled, last);
-            this.trace.append((char) ('A' + last));
+            if (enabled.isEmpty()) {
+                this.deadlock = buildHeldString();
+                for (ScheduledTask t : runnables)
+                    if (t.state != ScheduledThreadState.FINISHED)
+                        t.sem.release();
+                break;
+            }
 
+            last = strategy.pick(enabled, last);
             var task = this.runnables.get(last);
+            this.trace.append(task.id);
+
             task.state = ScheduledThreadState.WORKING;
             task.sem.release();
             sem.acquireUninterruptibly();
@@ -125,32 +136,41 @@ public final class Scheduler {
         }
     }
 
-    /**
-     * Трасса прогона: буквы потоков, выбранных во всех решениях подряд, например
-     * "AAAABB".
-     */
+    private String buildHeldString() {
+        var held = new ArrayList<String>();
+        for (SchedLock l : locks)
+            if (l.owner != null)
+                held.add(l.name + ":" + l.owner.id);
+        return "held={" + String.join(", ", held) + "}";
+    }
+
+    public ScheduledTask getCurrentTask() {
+        return CURRENT.get();
+    }
+
     public String traceString() {
         return this.trace.toString();
     }
 
-    /**
-     * window() из тестовых программ: пауза перед следующей операцией с общими
-     * данными обязательна.
-     */
     public static void point() {
         var current = CURRENT.get();
         log("window");
         current.touched = true;
     }
 
-    static void yield(ScheduledThreadState newState) {
+    static void yield(ScheduledThreadState newState, Boolean force) {
         var cur = CURRENT.get();
-        if (cur.touched) {
+
+        if (cur.touched || force) {
             cur.state = newState != null ? newState : ScheduledThreadState.WAITING;
             cur.touched = false;
             cur.mySched.sem.release();
             cur.sem.acquireUninterruptibly();
         }
+
+        if (cur.mySched.deadlock != null)
+            throw new RuntimeException();
+
         cur.touched = true;
     }
 
@@ -158,19 +178,22 @@ public final class Scheduler {
     public static void await(BooleanSupplier cond) {
         var cur = CURRENT.get();
         cur.condition = cond;
-        if (!cond.getAsBoolean())
-        {
-            cur.touched = true; // засыпает пока условие не выполнится
-            Scheduler.yield(ScheduledThreadState.WAITING_CONDITION);
+        if (!cond.getAsBoolean()) {
+            Scheduler.yield(ScheduledThreadState.WAITING_CONDITION, true);
         }
         log("await done");
+    }
+
+    public static void await_lock(BooleanSupplier lockCond) {
+        var cur = CURRENT.get();
+        cur.condition = lockCond;
+        Scheduler.yield(ScheduledThreadState.WAITING_LOCK, true);
     }
 
     public static void log(String msg) {
         var current = CURRENT.get();
         if (current.mySched.logging) {
-            var letter = (char) ('A' + current.mySched.runnables.indexOf(current));
-            current.mySched.log.add(letter + "  " + msg);
+            current.mySched.log.add(current.id + "  " + msg);
         }
     }
 }
