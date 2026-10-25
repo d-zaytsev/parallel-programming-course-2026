@@ -1,5 +1,6 @@
 package lab2;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -70,20 +71,57 @@ public final class Strategies {
      * Integer.MAX_VALUE.
      */
     public static final class Dfs implements Strategy {
+        private final int bound;
+
         public Dfs(int bound) {
+            this.bound = bound;
         }
 
-        /** Подготовиться к новому прогону (позиция в пути, счётчик вытеснений). */
+        private final List<Integer> levelChoice = new ArrayList<>();
+        private final List<List<Integer>> levelOptions = new ArrayList<>();
+        private int curLevel = 0;
+        private int yieldNum = 0;
+
         public void beginRun() {
+            this.curLevel = 0;
+            this.yieldNum = 0;
         }
 
         public int pick(List<Integer> enabled, int last) {
-            throw new UnsupportedOperationException("TODO этап 4: Dfs.pick");
+            boolean lastEnabled = enabled.contains(last);
+
+            if (this.curLevel == this.levelChoice.size()) {
+                this.levelChoice.add(0);
+                
+                if (lastEnabled && this.yieldNum >= this.bound)
+                    this.levelOptions.add(List.of(last));
+                else
+                    this.levelOptions.add(List.copyOf(enabled));
+            }
+
+            var choice = this.levelOptions.get(this.curLevel).get(this.levelChoice.get(this.curLevel));
+            this.curLevel++;
+
+            if (lastEnabled && choice != last)
+                this.yieldNum++;
+
+            return choice;
         }
 
-        /** Выбрать следующий путь; false — дерево обойдено. */
         public boolean endRun() {
-            throw new UnsupportedOperationException("TODO этап 4: Dfs.endRun");
+            for (int level = this.levelChoice.size() - 1; level >= 0; level--) {
+                int nextChoice = this.levelChoice.get(level) + 1;
+
+                if (nextChoice < this.levelOptions.get(level).size()) {
+                    this.levelChoice.set(level, nextChoice);
+                    return true;
+                } else {
+                    this.levelChoice.removeLast();
+                    this.levelOptions.removeLast();
+                }
+            }
+            return false;
         }
     }
+
 }

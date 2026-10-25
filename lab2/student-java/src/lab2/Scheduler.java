@@ -178,9 +178,7 @@ public final class Scheduler {
     public static void await(BooleanSupplier cond) {
         var cur = CURRENT.get();
         cur.condition = cond;
-        if (!cond.getAsBoolean()) {
-            Scheduler.yield(ScheduledThreadState.WAITING_CONDITION, true);
-        }
+        Scheduler.yield(ScheduledThreadState.WAITING_CONDITION, !cond.getAsBoolean());
         log("await done");
     }
 
