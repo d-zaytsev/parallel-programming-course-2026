@@ -159,6 +159,7 @@ public final class Targets {
         void snapshot() {
             int old = active.get();
             active.set(1 - old);
+            // читатель ждёт пока писатель выйдет из старого буфера
             for (int w = 0; w < writers; w++) { int k = w; Scheduler.await(() -> getInside(k) != old); }
             for (int w = 0; w < writers; w++) {
                 Shared<Long> c = cnt.get(w).get(old);
